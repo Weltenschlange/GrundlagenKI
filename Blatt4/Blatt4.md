@@ -188,3 +188,48 @@ Split nach Einkommen:
 Baum = $X_3$​(O,$X_1$(O,M),$X_2$(M,O)
 
 # Aufgabe 2
+
+|Nr.| Baum    | Regel |
+|---| ---     | ---   |
+|0| $x_3 ( x_2 ( x_1 ( C , A ) , x_1 ( B , A ) ) , x_1 ( x_2 ( C , B ) , A ) )$ |-|
+|1|$x_3 ( x_1 ( x_2 ( C , B ) , x_2 ( A , A ) ) , x_1 ( x_2 ( C , B ) , A ) )$|Transformationsregel auf linken Teilbaum|
+|2|$x_3 ( x_1 ( x_2 ( C , B ) , A ) , x_1 ( x_2 ( C , B ) , A ) )$|x_2 ( A , A ) => A
+|3|$x_1 ( x_2 ( C , B ) , A ))$|Bedingt irrelevantes Attribut
+
+# Aufgabe 3
+## 1
+In der Confusion Matrix kann man ablesen wie oft etwas eine Klasse falsch katigoigiert wurde und mit was sie vertaust wurde.
+### Zoo
+![Zoo](J48Zoo.png)
+
+### Restaurant
+![Zoo](J48Restaurant.png)
+
+## 2
+ - ordinal/numeric: für Zahlen
+ - string: Text werte
+ - nominal: vordefinierte Menge von Strings
+ 
+## 3
+### Zoo J48
+![](ArffZooJ48.png)
+### Zoo ID3
+---  
+### Restaurant J48
+![Yee](ArffRestJ48.png)
+### Restaurant ID3
+
+Patrons = Some: Yes  
+Patrons = Full  
+|  Type = French: No  
+|  Type = Thai  
+|  |  Fri/Sat = No: No  
+|  |  Fri/Sat = Yes: Yes  
+|  Type = Burger  
+|  |  YesAlternate = Yes: Yes  
+|  |  YesAlternate = No: No  
+|  Type = Italian: No  
+Patrons = None: No  
+
+### Fazit
+Für den Restaurant Datensatz sieht der Baum  bei J48 Sehr klein aus, da der Datensatz auch sehr klein ist. ID3 Konnte einen baum aufstellen, der Fehler Frei das Ergebniss bestimmen kann.
