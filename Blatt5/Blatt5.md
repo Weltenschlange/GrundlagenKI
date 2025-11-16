@@ -36,7 +36,7 @@ $C = \{$
 $\}$
 
 ## 2
-
+Siehe BTSearch.py
 ## 3
 
 ### 3.1
@@ -61,4 +61,47 @@ $-$ | false | 0-3 | 0-3 | 0-3 | 0-5
 
 ## 4
 
+### 4.1
+
+Variable | Start | End
+--- | --- | ---
+$v_1$ | \{2\} | \{2\}
+$v_2$ | \{0,1,2,3,4,5\} | \{1\}
+$v_3$ | \{0,1,2,3,4,5\} | \{2\}
+$v_4$ | \{0,1,2,3,4,5\} | \{0,1,3,4,5\}
+
+### 4.2
+
+Variable | Start | End
+--- | --- | ---
+$v_1$ | \{2\} | \{2\}
+$v_2$ | \{0,1,2,3,4,5\} | \{1\}
+$v_3$ | \{0,1,2,3,4,5\} | \{0,1,2\}
+$v_4$ | \{0,1,2,3,4,5\} | \{0,1,2,3,4,5\}
+
+Die gesamte Kantenkonsistenz hat im Kontrast zum Forward Checking 3 zusätzliche Werte aus den Wertebereichen entfernt.
+
 ## 5
+
+$V = \{Obj\}$
+
+$Obj = \{Name, PosX, PosY, Hoehe, Breite\}$
+
+$D = \{$  
+$D_{Obj.PosX} = \{0 - 1000\}$  
+$D_{Obj.PosY} = \{0 - 400\}$  
+$D_{Obj.Hoehe} = \{0 - 1000\}$  
+$D_{Obj.Breite} = \{0 - 400\}$  
+$D_{Obj.Name} = \{Bar, Kletterberg, Hüpfburg, Notausgang, Eingang\}$  
+$\}$  
+
+$C = \{$  
+$c_1 = \{(Obj, x \epsilon Platzierte Obj), NOT($  
+$((Obj.PosX - 10) < x.PosX < (Obj.PosX + Obj.Breite + 10)\ OR$  
+$(Obj.PosX - 10) < (x.PosX + x.Breite) < (Obj.PosX + Obj.Breite + 10))\ AND$  
+$((Obj.PosY - 10) < x.PosY < (Obj.PosY + Obj.Hoehe + 10)\ OR$  
+$(Obj.PosY - 10) < (x.PosY + x.Hoehe) < (Obj.PosY + Obj.Hoehe + 10))$  
+$)\}$  
+$c_2 = \{Obj.Name = Notausgang\ OR\ Obj.Name = Eingang \rArr (Obj.PosX \epsilon \{0, 1000\}\ AND\ Obj.Breite = 0)\ OR\  (Obj.PosY \epsilon \{0, 400\}\ AND\ Obj.Hoehe = 0)\}$  
+$c_3 = \{$Der kürzeste Vektor zwischen der Bar und jedem Objekt, dass kein Notausgang oder Eingang ist darf nicht durch den Bereich eines anderen Objektes verlaufen.$\}$  
+$\}$
