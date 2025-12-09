@@ -1,5 +1,6 @@
 import pandas as pd
 import re
+<<<<<<< HEAD
 from typing import List, Tuple, Set, Dict, Optional
 
 class AttributeValue:
@@ -270,6 +271,10 @@ class UnknownConstraint(CPSConstraint):
 
 
 class PreProcces:
+=======
+
+class PreProccesPuzzle:
+>>>>>>> 3c96c42 (put logic in seperat file)
     PATTERNS = {
         "not_at_position": re.compile(r"(.+)\s+is\s+not\s+in\s+the\s+(\w+)\s+house"),
         "at_position": re.compile(r"(.+)\s+(?:is\s+)?in\s+the\s+(\w+)\s+house"),
@@ -302,6 +307,7 @@ class PreProcces:
         
         return characteristics_text, clues
 
+<<<<<<< HEAD
     def extract_attributes(self, characteristics_text) -> Tuple[pd.DataFrame, Set[AttributeValue]]:
         """
         Extract attribute columns from characteristics section.
@@ -313,6 +319,11 @@ class PreProcces:
         """
         attributes = {}
         attr_values = set()
+=======
+    def extract_attributes(self, characteristics_text):
+        """Extract attribute columns from characteristics section."""
+        attributes = {}
+>>>>>>> 3c96c42 (put logic in seperat file)
         
         lines = characteristics_text.split('\n')
         
@@ -331,11 +342,16 @@ class PreProcces:
                 
                 if values:
                     attributes[attr_name] = values
+<<<<<<< HEAD
                     # Create AttributeValue objects for this column
                     for val in values:
                         attr_values.add(AttributeValue(val, attr_name))
         
         return pd.DataFrame(attributes), attr_values
+=======
+        
+        return pd.DataFrame(attributes)
+>>>>>>> 3c96c42 (put logic in seperat file)
 
     def normalize(self, clue):
         """
@@ -351,6 +367,7 @@ class PreProcces:
         clue = clue.replace("the person ", "")
         return clue.strip()
 
+<<<<<<< HEAD
     def extract_symbols(self, clue: str, attr_values: Set[AttributeValue]) -> Dict:
         """
         Extract entity references from a clue based on known attribute values.
@@ -370,6 +387,21 @@ class PreProcces:
         for attr_val in attr_values:
             if attr_val.value in clue_lower:
                 entities.append(attr_val)
+=======
+    def extract_symbols(self, clue, known_entities):
+        """
+        Extract entity references from a clue based on known entities.
+        Also extract position numbers (first, second, third, etc.)
+        
+        Args:
+            clue: The normalized clue text
+            known_entities: List of all known attribute values
+        
+        Returns:
+            Dict with 'entities' (list) and 'position' (int or None)
+        """
+        entities = [e for e in known_entities if e.lower() in clue.lower()]
+>>>>>>> 3c96c42 (put logic in seperat file)
         
         # Extract position if present (first, second, third, etc.)
         position_map = {
@@ -378,23 +410,40 @@ class PreProcces:
         }
         position = None
         for pos_word, pos_num in position_map.items():
+<<<<<<< HEAD
             if pos_word in clue_lower:
+=======
+            if pos_word in clue.lower():
+>>>>>>> 3c96c42 (put logic in seperat file)
                 position = pos_num
                 break
         
         return {'entities': entities, 'position': position}
 
+<<<<<<< HEAD
     def parse_clue(self, clue: str, attr_values: Set[AttributeValue]) -> Tuple[str, Dict, Tuple]:
+=======
+    def parse_clue(self, clue, known_entities):
+>>>>>>> 3c96c42 (put logic in seperat file)
         """
         Parse a clue and identify its type and relevant symbols.
         
         Args:
             clue: The clue text
+<<<<<<< HEAD
             attr_values: Set of AttributeValue objects tracking (value, column) pairs
         
         Returns:
             Tuple of (constraint_type, symbol_data, match_groups)
             symbol_data: Dict with 'entities' (list of AttributeValue objects) and 'position' (int or None)
+=======
+            known_entities: List of all known attribute values
+        
+        Returns:
+            Tuple of (constraint_type, symbol_data, match_groups)
+            symbol_data: Dict with 'entities' (list) and 'position' (int or None)
+            Example: ("not_at_position", {"entities": ["eric"], "position": 1}, ("eric", "second"))
+>>>>>>> 3c96c42 (put logic in seperat file)
         
         Raises:
             ValueError: If clue doesn't match any known pattern
@@ -405,28 +454,48 @@ class PreProcces:
         for ctype, pattern in self.PATTERNS.items():
             match = pattern.search(clue)
             if match:
+<<<<<<< HEAD
                 symbols = self.extract_symbols(clue, attr_values)
+=======
+                symbols = self.extract_symbols(clue, known_entities)
+>>>>>>> 3c96c42 (put logic in seperat file)
                 return ctype, symbols, match.groups()
         
         # If no pattern matched, raise an error
         raise ValueError(f"Unrecognized clue format: {clue}")
 
+<<<<<<< HEAD
     def parse_puzzle_clues(self, attrs_df: pd.DataFrame, clues: List[str], attr_values: Set[AttributeValue]) -> List[Tuple]:
+=======
+    def parse_puzzle_clues(self, attrs_df, clues):
+>>>>>>> 3c96c42 (put logic in seperat file)
         """
         Parse all clues from the puzzle using the full pipeline.
         
         Args:
+<<<<<<< HEAD
             attrs_df: The attributes DataFrame
             clues: List of clue strings
             attr_values: Set of AttributeValue objects
+=======
+            puzzle_text: The raw puzzle text
+>>>>>>> 3c96c42 (put logic in seperat file)
         
         Returns:
             List of tuples: (original_clue, constraint_type, symbols, match_groups)
         """
+<<<<<<< HEAD
+=======
+        known_entities = []
+        for col in attrs_df.columns:
+            known_entities.extend(attrs_df[col].tolist())
+        
+>>>>>>> 3c96c42 (put logic in seperat file)
         parsed_clues = []
         
         for _, clue in enumerate(clues, 1):
             try:
+<<<<<<< HEAD
                 ctype, symbols, groups = self.parse_clue(clue, attr_values)
                 parsed_clues.append((clue, ctype, symbols, groups))
             except ValueError as e:
@@ -468,4 +537,20 @@ class PreProcces:
         constraints = self.build_constraints(parsed_clues)
 
         return attrs, constraints, attr_values
+=======
+                ctype, symbols, groups = self.parse_clue(clue, known_entities)
+                parsed_clues.append((clue, ctype, symbols, groups))
+            except ValueError as e:
+                parsed_clues.append((clue, "UNKNOWN", [], ()))
+        
+        return parsed_clues
+    
+    def proccess(self, puzzle_text):
+
+        characteristics_text, clues = self.preprocess_puzzle(puzzle_text)
+
+        attrs = self.extract_attributes(characteristics_text)
+
+        parsed_clues = self.parse_puzzle_clues(attrs,clues)
+>>>>>>> 3c96c42 (put logic in seperat file)
 
