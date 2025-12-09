@@ -1,5 +1,29 @@
 import pandas as pd
 import re
+from typing import List, Tuple, Set, Dict, Optional
+
+class AttributeValue:
+    """Represents a value with its source column information."""
+    
+    def __init__(self, value: str, column: str):
+        self.value = value.lower()
+        self.column = column.lower()
+    
+    def __eq__(self, other):
+        if isinstance(other, AttributeValue):
+            return self.value == other.value and self.column == other.column
+        return False
+    
+    def __hash__(self):
+        return hash((self.value, self.column))
+    
+    def __repr__(self):
+        return f"AttributeValue({self.value!r}, {self.column!r})"
+    
+    def matches(self, value_str: str) -> bool:
+        """Check if this value matches a string (case-insensitive)."""
+        return self.value == value_str.lower()
+
 
 class CPSConstraint:
     """Base class for all constraint types."""
@@ -9,17 +33,28 @@ class CPSConstraint:
         self.symbols = symbols or {}
         self.groups = groups or ()
 
-    def _known_values(self, attrs_df):
-        values = set()
-        for col in attrs_df.columns:
-            values.update(attrs_df[col].dropna().astype(str).str.lower().tolist())
-        return values
+    def _known_values(self, attr_values: Set[AttributeValue]) -> Set[AttributeValue]:
+        """Return set of known AttributeValue objects."""
+        return attr_values
 
-    def _entity_positions(self, entity, attrs_df):
-        """Return list of row indices where the entity appears in any column."""
+    def _entity_positions(self, attr_value: AttributeValue, attrs_df) -> List[int]:
+        """
+        Return list of row indices where the entity appears in its specific column.
+        
+        Args:
+            attr_value: AttributeValue object with value and column info
+            attrs_df: The attributes DataFrame
+        
+        Returns:
+            List of row indices where this value appears in its column
+        """
         positions = []
-        for idx, row in attrs_df.iterrows():
-            if any(str(cell).lower() == str(entity).lower() for cell in row.dropna()):
+        if attr_value.column not in attrs_df.columns:
+            return positions
+        
+        col = attrs_df[attr_value.column]
+        for idx, cell in col.items():
+            if cell is not None and str(cell).lower() == attr_value.value:
                 positions.append(idx)
         return positions
 
@@ -36,14 +71,26 @@ class EntityPositionConstraint(CPSConstraint):
     """Shared logic for constraints that bind an entity to an explicit position."""
 
     def _validate_entity(self, attrs_df):
+        """Validate that entity exists in its specified column."""
         entities = self.symbols.get("entities", []) or []
         if not entities:
             return [], ["missing entity"]
-        ent = entities[0]
-        positions = self._entity_positions(ent, attrs_df)
-        if not positions:
-            return [], [f"unknown entity: {ent}"]
-        return positions, []
+        
+        # entities is now a list of AttributeValue objects
+        # Try each one until we find a valid position
+        all_positions = []
+        issues = []
+        
+        for attr_val in entities:
+            positions = self._entity_positions(attr_val, attrs_df)
+            if positions:
+                all_positions.extend(positions)
+            else:
+                issues.append(f"unknown entity: {attr_val.value} (column: {attr_val.column})")
+        
+        if all_positions:
+            return list(set(all_positions)), []
+        return [], issues if issues else ["no valid entity found"]
 
     def _validate_position(self, attrs_df):
         position = self.symbols.get("position")
@@ -90,25 +137,32 @@ class PairwiseConstraint(CPSConstraint):
     """Constraints that reference two entities without explicit positions."""
 
     def _pair_positions(self, attrs_df):
+        """Get positions for entity pairs with column awareness."""
         entities = self.symbols.get("entities", []) or []
 
         if len(entities) >= 2:
-            a, b = entities[0], entities[1]
+            entities_to_use = entities[:2]
         elif len(entities) == 1:
-            # Duplicate the single entity if clue implies self-relation (e.g., "german is german").
-            a, b = entities[0], entities[0]
+            # Duplicate the single entity if clue implies self-relation
+            entities_to_use = [entities[0], entities[0]]
         elif len(getattr(self, "groups", ())) >= 2:
-            a, b = self.groups[0], self.groups[1]
+            # Fallback to groups (legacy support)
+            return [], [], ["missing pair entities with column context"]
         else:
             return [], [], ["missing pair entities"]
 
+        # entities are now AttributeValue objects
+        a, b = entities_to_use[0], entities_to_use[1]
+        
         pos_a = self._entity_positions(a, attrs_df)
         pos_b = self._entity_positions(b, attrs_df)
         issues = []
+        
         if not pos_a:
-            issues.append(f"unknown entity: {a}")
+            issues.append(f"unknown entity: {a.value} (column: {a.column})")
         if not pos_b:
-            issues.append(f"unknown entity: {b}")
+            issues.append(f"unknown entity: {b.value} (column: {b.column})")
+        
         return pos_a, pos_b, issues
 
 
@@ -248,9 +302,17 @@ class PreProcces:
         
         return characteristics_text, clues
 
-    def extract_attributes(self, characteristics_text):
-        """Extract attribute columns from characteristics section."""
+    def extract_attributes(self, characteristics_text) -> Tuple[pd.DataFrame, Set[AttributeValue]]:
+        """
+        Extract attribute columns from characteristics section.
+        
+        Returns:
+            Tuple of (attributes_df, attr_values_set)
+            - attributes_df: DataFrame with attribute columns
+            - attr_values_set: Set of AttributeValue objects tracking (value, column) pairs
+        """
         attributes = {}
+        attr_values = set()
         
         lines = characteristics_text.split('\n')
         
@@ -269,8 +331,11 @@ class PreProcces:
                 
                 if values:
                     attributes[attr_name] = values
+                    # Create AttributeValue objects for this column
+                    for val in values:
+                        attr_values.add(AttributeValue(val, attr_name))
         
-        return pd.DataFrame(attributes)
+        return pd.DataFrame(attributes), attr_values
 
     def normalize(self, clue):
         """
@@ -286,19 +351,25 @@ class PreProcces:
         clue = clue.replace("the person ", "")
         return clue.strip()
 
-    def extract_symbols(self, clue, known_entities):
+    def extract_symbols(self, clue: str, attr_values: Set[AttributeValue]) -> Dict:
         """
-        Extract entity references from a clue based on known entities.
-        Also extract position numbers (first, second, third, etc.)
+        Extract entity references from a clue based on known attribute values.
+        Matches both the value and its column.
         
         Args:
             clue: The normalized clue text
-            known_entities: List of all known attribute values
+            attr_values: Set of AttributeValue objects tracking (value, column) pairs
         
         Returns:
-            Dict with 'entities' (list) and 'position' (int or None)
+            Dict with 'entities' (list of AttributeValue objects) and 'position' (int or None)
         """
-        entities = [e for e in known_entities if e.lower() in clue.lower()]
+        entities = []
+        clue_lower = clue.lower()
+        
+        # Find all matching attribute values in the clue
+        for attr_val in attr_values:
+            if attr_val.value in clue_lower:
+                entities.append(attr_val)
         
         # Extract position if present (first, second, third, etc.)
         position_map = {
@@ -307,24 +378,23 @@ class PreProcces:
         }
         position = None
         for pos_word, pos_num in position_map.items():
-            if pos_word in clue.lower():
+            if pos_word in clue_lower:
                 position = pos_num
                 break
         
         return {'entities': entities, 'position': position}
 
-    def parse_clue(self, clue, known_entities):
+    def parse_clue(self, clue: str, attr_values: Set[AttributeValue]) -> Tuple[str, Dict, Tuple]:
         """
         Parse a clue and identify its type and relevant symbols.
         
         Args:
             clue: The clue text
-            known_entities: List of all known attribute values
+            attr_values: Set of AttributeValue objects tracking (value, column) pairs
         
         Returns:
             Tuple of (constraint_type, symbol_data, match_groups)
-            symbol_data: Dict with 'entities' (list) and 'position' (int or None)
-            Example: ("not_at_position", {"entities": ["eric"], "position": 1}, ("eric", "second"))
+            symbol_data: Dict with 'entities' (list of AttributeValue objects) and 'position' (int or None)
         
         Raises:
             ValueError: If clue doesn't match any known pattern
@@ -335,34 +405,32 @@ class PreProcces:
         for ctype, pattern in self.PATTERNS.items():
             match = pattern.search(clue)
             if match:
-                symbols = self.extract_symbols(clue, known_entities)
+                symbols = self.extract_symbols(clue, attr_values)
                 return ctype, symbols, match.groups()
         
         # If no pattern matched, raise an error
         raise ValueError(f"Unrecognized clue format: {clue}")
 
-    def parse_puzzle_clues(self, attrs_df, clues):
+    def parse_puzzle_clues(self, attrs_df: pd.DataFrame, clues: List[str], attr_values: Set[AttributeValue]) -> List[Tuple]:
         """
         Parse all clues from the puzzle using the full pipeline.
         
         Args:
-            puzzle_text: The raw puzzle text
+            attrs_df: The attributes DataFrame
+            clues: List of clue strings
+            attr_values: Set of AttributeValue objects
         
         Returns:
             List of tuples: (original_clue, constraint_type, symbols, match_groups)
         """
-        known_entities = []
-        for col in attrs_df.columns:
-            known_entities.extend(attrs_df[col].tolist())
-        
         parsed_clues = []
         
         for _, clue in enumerate(clues, 1):
             try:
-                ctype, symbols, groups = self.parse_clue(clue, known_entities)
+                ctype, symbols, groups = self.parse_clue(clue, attr_values)
                 parsed_clues.append((clue, ctype, symbols, groups))
             except ValueError as e:
-                parsed_clues.append((clue, "UNKNOWN", [], ()))
+                parsed_clues.append((clue, "UNKNOWN", {}, ()))
         
         return parsed_clues
 
@@ -384,15 +452,20 @@ class PreProcces:
             constraints.append(cls(clue, symbols, groups))
         return constraints
     
-    def proccess(self, puzzle_text):
-
+    def proccess(self, puzzle_text: str) -> Tuple[pd.DataFrame, List, Set[AttributeValue]]:
+        """
+        Process puzzle text and return attributes, constraints, and attribute values.
+        
+        Returns:
+            Tuple of (attrs_df, constraints, attr_values)
+        """
         characteristics_text, clues = self.preprocess_puzzle(puzzle_text)
 
-        attrs = self.extract_attributes(characteristics_text)
+        attrs, attr_values = self.extract_attributes(characteristics_text)
 
-        parsed_clues = self.parse_puzzle_clues(attrs, clues)
+        parsed_clues = self.parse_puzzle_clues(attrs, clues, attr_values)
 
         constraints = self.build_constraints(parsed_clues)
 
-        return attrs, constraints
+        return attrs, constraints, attr_values
 
