@@ -452,7 +452,7 @@ class PreProcces:
             constraints.append(cls(clue, symbols, groups))
         return constraints
     
-    def proccess(self, puzzle_text: str) -> Tuple[pd.DataFrame, List, Set[AttributeValue]]:
+    def process(self, puzzle_text: str) -> Tuple[pd.DataFrame, List, Set[AttributeValue]]:
         """
         Process puzzle text and return attributes, constraints, and attribute values.
         
