@@ -60,7 +60,7 @@ class PreProcess:
                 if values:
                     attributes[attr_name] = values
             
-        attributes["House"] = [f"{i+1}" for i in range(len(next(iter(attributes.values()))))]
+        attributes["house nr."] = [f"{i+1}" for i in range(len(next(iter(attributes.values()))))]
         return attributes
 
     def extract_symbols(self, clue, known_entities):
