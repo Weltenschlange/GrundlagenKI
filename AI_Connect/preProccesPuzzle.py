@@ -29,6 +29,7 @@ class PreProcess:
                 # Remove leading number and period (e.g., "1. ", "2. ")
                 clue = re.sub(r'^\d+\.\s+', '', line)
                 if clue:
+                    clue = clue.replace("-"," ")
                     clues.append(clue)
         
         return characteristics_text, clues
@@ -48,13 +49,16 @@ class PreProcess:
 
                 words = description.split()
                 attr_name = words[-1] if words else "unknown"
+                if attr_name == "genres" or attr_name == "models":
+                    attr_name = words[-2]
                 
                 # Extract all backtick-quoted values
                 values = re.findall(r'`([^`]+)`', values_str)
                 
                 if values:
                     attributes[attr_name] = values
-        
+            
+        attributes["House"] = [f"{i+1}" for i in range(len(next(iter(attributes.values()))))]
         return attributes
 
     def extract_symbols(self, clue, known_entities):
@@ -83,31 +87,6 @@ class PreProcess:
                 break
         
         return {'entities': entities, 'position': position}
-
-    def parse_puzzle_clues(self, attrs_df, clues):
-        """
-        Parse all clues from the puzzle using the full pipeline.
-        
-        Args:
-            puzzle_text: The raw puzzle text
-        
-        Returns:
-            List of tuples: (original_clue, constraint_type, symbols, match_groups)
-        """
-        known_entities = []
-        for col in attrs_df.columns:
-            known_entities.extend(attrs_df[col].tolist())
-        
-        parsed_clues = []
-        
-        for _, clue in enumerate(clues, 1):
-            try:
-                ctype, symbols, groups = self.parse_clue(clue, known_entities)
-                parsed_clues.append((clue, ctype, symbols, groups))
-            except ValueError as e:
-                parsed_clues.append((clue, "UNKNOWN", [], ()))
-        
-        return parsed_clues
     
     def proccess(self, puzzle_text):
         characteristics_text, clues = self.preprocess_puzzle(puzzle_text)
