@@ -51,6 +51,8 @@ class PreProcess:
                 attr_name = words[-1] if words else "unknown"
                 if attr_name == "genres" or attr_name == "models":
                     attr_name = words[-2]
+                if attr_name == "unique":
+                    attr_name = "mother"
                 
                 # Extract all backtick-quoted values
                 values = re.findall(r'`([^`]+)`', values_str)
