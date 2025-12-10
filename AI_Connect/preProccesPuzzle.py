@@ -1,4 +1,3 @@
-import pandas as pd
 import re
 
 class PreProcess:
@@ -56,7 +55,7 @@ class PreProcess:
                 if values:
                     attributes[attr_name] = values
         
-        return pd.DataFrame(attributes)
+        return attributes
 
     def extract_symbols(self, clue, known_entities):
         """
