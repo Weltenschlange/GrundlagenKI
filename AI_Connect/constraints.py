@@ -127,10 +127,7 @@ class DistanceConstrain(Constraint):
     def get_info(self):
         return f"DistanceConstrain: {self.clue}\ndistance:{self.distance}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
     
-    #DISTANCE: there is one house between X and Y
-    #DISTANCE: there are two houses between X and Y
     def _parse_attributes(self):
-        # Extract distance from clue
         distance_words = {
             "one": 1,
             "two": 2,
@@ -144,25 +141,24 @@ class DistanceConstrain(Constraint):
             "ten": 10
         }
         
-        self.distance = 1  # Default
+        self.distance = 1 
         clue_lower = self.clue.lower()
         
-        # Find the distance word in the clue
         for word, value in distance_words.items():
             if word in clue_lower:
                 self.distance = value
                 break
         
-        # Extract entities from "between X and Y"
-        if "between " in clue_lower:
-            
-            between_index = clue_lower.find("between ")
-            after_between = self.clue[between_index + 8:]  
-            
-            parts = after_between.split(" and ")
+        # Pattern: "there is [distance] house(s) between X and Y"
+        # Split by " and " to separate the two entities
+        if " and " in clue_lower:
+            parts = self.clue.split(" and ")
             
             if len(parts) >= 2:
+                # Extract attr1 from the first part (before " and ")
                 self.attr1 = self._extract_attribute_from_text(parts[0])
+                
+                # Extract attr2 from the second part (after " and ")
                 second_part = parts[1].rstrip(".")
                 self.attr2 = self._extract_attribute_from_text(second_part)
 
@@ -180,7 +176,6 @@ class DistanceConstrain(Constraint):
     
     def get_wrong_attributes(self, currentSolution):
         raise NotImplementedError()
-
 
 class LeftConstrain(Constraint):
 
@@ -239,6 +234,158 @@ class RightConstrain(Constraint):
     
     def get_wrong_attributes(self, currentSolution):
         raise NotImplementedError()
+    
+class DirectLeftConstrain(Constraint):
+
+    def get_info(self):
+        return f"DirectLeftConstrain: {self.clue}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
+    
+    def _parse_attributes(self):
+        if " is directly left of " in self.clue:
+            parts = self.clue.split(" is directly left of ")
+            
+            if len(parts) == 2:
+                self.attr1 = self._extract_attribute_from_text(parts[0])
+                second_part = parts[1].rstrip(".")
+                self.attr2 = self._extract_attribute_from_text(second_part)
 
 
+    def __init__(self, attributes: dict, clue: str):
+        super().__init__(attributes, clue)
+        self.attr1:tuple = None
+        self.attr2:tuple = None
+        self._parse_attributes()
 
+
+    def is_valid(self, currentSolution):
+        raise NotImplementedError()
+    
+    def get_wrong_attributes(self, currentSolution):
+        raise NotImplementedError()
+    
+class DirectRightConstrain(Constraint):
+
+    def get_info(self):
+        return f"DirectRightConstrain: {self.clue}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
+    
+    def _parse_attributes(self):
+        if " is directly right of " in self.clue:
+            parts = self.clue.split(" is directly right of ")
+            
+            if len(parts) == 2:
+                self.attr1 = self._extract_attribute_from_text(parts[0])
+                second_part = parts[1].rstrip(".")
+                self.attr2 = self._extract_attribute_from_text(second_part)
+
+
+    def __init__(self, attributes: dict, clue: str):
+        super().__init__(attributes, clue)
+        self.attr1:tuple = None
+        self.attr2:tuple = None
+        self._parse_attributes()
+
+
+    def is_valid(self, currentSolution):
+        raise NotImplementedError()
+    
+    def get_wrong_attributes(self, currentSolution):
+        raise NotImplementedError()
+
+class PositionAbsoluteConstrain(Constraint):
+
+    def get_info(self):
+        return f"PositionAbsoluteConstrain: {self.clue}\nPosition:{self.pos}\nattr1:{self.attr1}\nattributes:{self.attributes}\n"
+    
+    def _parse_attributes(self):
+        position_words = {
+            "first": 1,
+            "second": 2,
+            "third": 3,
+            "fourth": 4,
+            "fifth": 5,
+            "sixth": 6,
+            "seventh": 7,
+            "eighth": 8,
+            "ninth": 9,
+            "tenth": 10
+        }
+        
+        self.pos = None
+        clue_lower = self.clue.lower()
+        
+        for word, value in position_words.items():
+            if word in clue_lower:
+                self.pos = value
+                break
+        
+        if " is in the " in clue_lower:
+            parts = self.clue.split(" is in the ")
+            
+            if len(parts) >= 1:
+                self.attr1 = self._extract_attribute_from_text(parts[0])
+
+
+    def __init__(self, attributes: dict, clue: str):
+        super().__init__(attributes, clue)
+        self.attr1:tuple = None
+        self.pos = None
+        self._parse_attributes()
+
+
+    def is_valid(self, currentSolution):
+        raise NotImplementedError()
+    
+    def get_wrong_attributes(self, currentSolution):
+        raise NotImplementedError()
+
+class PositionAbsoluteNegativeConstrain(Constraint):
+
+    def get_info(self):
+        return f"PositionAbsoluteNegativeConstrain: {self.clue}\nPosition:{self.pos}\nattr1:{self.attr1}\nattributes:{self.attributes}\n"
+    
+    def _parse_attributes(self):
+        # Pattern: "X is not in the [position] house."
+        # Position mapping
+        position_words = {
+            "first": 1,
+            "second": 2,
+            "third": 3,
+            "fourth": 4,
+            "fifth": 5,
+            "sixth": 6,
+            "seventh": 7,
+            "eighth": 8,
+            "ninth": 9,
+            "tenth": 10
+        }
+        
+        self.pos = None
+        clue_lower = self.clue.lower()
+        
+        # Find position word in the clue
+        for word, value in position_words.items():
+            if word in clue_lower:
+                self.pos = value
+                break
+        
+        # Extract entity from "X is not in the [position] house"
+        if " is not in the " in clue_lower:
+            # Get the part before " is not in the "
+            parts = self.clue.split(" is not in the ")
+            
+            if len(parts) >= 1:
+                # Extract attribute from the first part
+                self.attr1 = self._extract_attribute_from_text(parts[0])
+
+    def __init__(self, attributes: dict, clue: str):
+        super().__init__(attributes, clue)
+        self.attr1:tuple = None
+        self.pos = None
+        self._parse_attributes()
+
+
+    def is_valid(self, currentSolution):
+        raise NotImplementedError()
+    
+    def get_wrong_attributes(self, currentSolution):
+        raise NotImplementedError()
