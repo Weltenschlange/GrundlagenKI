@@ -21,27 +21,24 @@ class PreProcess:
         characteristics_text = parts[0]
         clues_text = parts[1]
         
-        # Extract clues, removing the number prefix (e.g., "1. ", "2. ")
         clues = []
         for line in clues_text.split('\n'):
             line = line.strip()
             if line:
-                # Remove leading number and period (e.g., "1. ", "2. ")
                 clue = re.sub(r'^\d+\.\s+', '', line)
                 if clue:
+                    #replace "-"" with " " so that worlds like hip-hop are now hip hop wich are found in attributes
                     clue = clue.replace("-"," ")
                     clues.append(clue)
         
         return characteristics_text, clues
 
     def extract_attributes(self, characteristics_text):
-        """Extract attribute columns from characteristics section."""
         attributes = {}
         
         lines = characteristics_text.split('\n')
         
         for line in lines:
-            # Match lines that have format: " - Description: `value1`, `value2`, ..."
             match = re.match(r'\s*-\s*(.+?):\s*(.+)', line)
             if match:
                 description = match.group(1).strip()
@@ -49,12 +46,17 @@ class PreProcess:
 
                 words = description.split()
                 attr_name = words[-1] if words else "unknown"
+
+                #this are edge cases when we get genres or models as names use the word before that like music/film or phone/car
                 if attr_name == "genres" or attr_name == "models":
                     attr_name = words[-2]
+
+                #the only attribute that is not easely understandeble with my extraction method is the mother attribute
+                #thats why i rename it
                 if attr_name == "unique":
                     attr_name = "mother"
                 
-                # Extract all backtick-quoted values
+
                 values = re.findall(r'`([^`]+)`', values_str)
                 
                 if values:
@@ -62,33 +64,6 @@ class PreProcess:
             
         attributes["house nr."] = [f"{i+1}" for i in range(len(next(iter(attributes.values()))))]
         return attributes
-
-    def extract_symbols(self, clue, known_entities):
-        """
-        Extract entity references from a clue based on known entities.
-        Also extract position numbers (first, second, third, etc.)
-        
-        Args:
-            clue: The normalized clue text
-            known_entities: List of all known attribute values
-        
-        Returns:
-            Dict with 'entities' (list) and 'position' (int or None)
-        """
-        entities = [e for e in known_entities if e.lower() in clue.lower()]
-        
-        # Extract position if present (first, second, third, etc.)
-        position_map = {
-            'first': 0, 'second': 1, 'third': 2, 'fourth': 3, 'fifth': 4,
-            'sixth': 5, 'seventh': 6, 'eighth': 7, 'ninth': 8, 'tenth': 9
-        }
-        position = None
-        for pos_word, pos_num in position_map.items():
-            if pos_word in clue.lower():
-                position = pos_num
-                break
-        
-        return {'entities': entities, 'position': position}
     
     def proccess(self, puzzle_text):
         characteristics_text, clues = self.preprocess_puzzle(puzzle_text)

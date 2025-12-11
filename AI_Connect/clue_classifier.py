@@ -2,10 +2,10 @@ import re
 from typing import Tuple
 
 class ClueClassifier:
-    """Simple classifier that categorizes puzzle clues by type."""
     
     def __init__(self):
-        # Compile patterns for each clue type
+
+        #do not question thes black magic it works
         self.patterns = {
             'POSITION_ABSOLUTE': re.compile(r'(?:is\s+)?in\s+the\s+(\w+)\s+house', re.IGNORECASE),
             'POSITION_ABSOLUTE_NEGATIVE': re.compile(r'is\s+not\s+in\s+the\s+(\w+)\s+house', re.IGNORECASE),
@@ -19,28 +19,8 @@ class ClueClassifier:
         }
     
     def classify(self, clue: str) -> Tuple[str, str]:
-        """
-        Classify a clue and return (clue, type).
-        
-        Args:
-            clue: The clue text to classify
-            
-        Returns:
-            Tuple of (clue, type_string) where type_string is one of:
-            - 'POSITION_ABSOLUTE': X is in the Nth house
-            - 'POSITION_ABSOLUTE_NEGATIVE': X is not in the Nth house
-            - 'DISTANCE': N house(s) between X and Y
-            - 'NEXT_TO': X and Y are next to each other
-            - 'DIRECT_LEFT': X is directly left of Y
-            - 'DIRECT_RIGHT': X is directly right of Y
-            - 'LEFT': X is somewhere left of Y
-            - 'RIGHT': X is somewhere right of Y
-            - 'IDENTITY': X is Y (attribute assignment)
-            - 'UNKNOWN': Could not classify
-        """
         clue = clue.strip()
         
-        # Check patterns in order of specificity (most specific first)
         if self.patterns['POSITION_ABSOLUTE_NEGATIVE'].search(clue):
             return (clue, 'POSITION_ABSOLUTE_NEGATIVE')
         
