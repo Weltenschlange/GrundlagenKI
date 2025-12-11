@@ -62,7 +62,7 @@ class PreProcess:
                 if values:
                     attributes[attr_name] = values
             
-        attributes["house nr."] = [f"{i+1}" for i in range(len(next(iter(attributes.values()))))]
+        #attributes["house nr."] = [f"{i+1}" for i in range(len(next(iter(attributes.values()))))]
         return attributes
     
     def proccess(self, puzzle_text):
