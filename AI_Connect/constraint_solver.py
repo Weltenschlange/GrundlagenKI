@@ -38,11 +38,7 @@ class ConstraintSolver:
         if not self._propagate():
             return None
         
-        # Start backtracking search
         result = self._backtrack({})
-        
-        print(f"Backtrack count: {self.backtrack_count}")
-        print(f"Propagation calls: {self.propagation_calls}")
         
         return result
     
@@ -113,24 +109,22 @@ class ConstraintSolver:
     
     def _ac3(self) -> bool:
         """
-        AC-3 Algorithm: Enforces arc consistency on binary constraints.
+        Optimized AC-3 Algorithm with Lazy Arc Creation.
+        
+        Instead of creating all arcs upfront (6 * num_attributes * 6 * num_attributes = expensive),
+        only create arcs for attribute pairs that interact based on constraints.
         
         An arc from variable Xi to variable Xj is consistent if for every value in Xi's domain,
         there exists a value in Xj's domain that satisfies the constraint between them.
         """
-        # Build initial queue of all arcs
-        queue = []
-        
-        # Create arcs between all pairs of positions and attributes
-        for houseNr1 in range(1, self.num_House + 1):
-            for attr_key1 in self.attributes.keys():
-                for houseNr2 in range(1, self.num_House + 1):
-                    for attr_key2 in self.attributes.keys():
-                        if (houseNr1, attr_key1) != (houseNr2, attr_key2):
-                            queue.append(((houseNr1, attr_key1), (houseNr2, attr_key2)))
+        # Build initial queue with only relevant arcs based on constraints
+        queue = self._get_initial_arcs()
+        queue_set = set(queue)  # For O(1) membership testing
         
         while queue:
-            (houseNr_i, attr_key_i), (houseNr_j, attr_key_j) = queue.pop(0)
+            arc = queue.pop(0)
+            queue_set.discard(arc)
+            (houseNr_i, attr_key_i), (houseNr_j, attr_key_j) = arc
             
             # Revise the domain of variable Xi
             if self._revise(houseNr_i, attr_key_i, houseNr_j, attr_key_j):
@@ -144,10 +138,61 @@ class ConstraintSolver:
                     for attr_key_k in self.attributes.keys():
                         if (houseNr_k, attr_key_k) != (houseNr_i, attr_key_i) and \
                            (houseNr_k, attr_key_k) != (houseNr_j, attr_key_j):
-                            if ((houseNr_k, attr_key_k), (houseNr_i, attr_key_i)) not in queue:
-                                queue.append(((houseNr_k, attr_key_k), (houseNr_i, attr_key_i)))
+                            reverse_arc = ((houseNr_k, attr_key_k), (houseNr_i, attr_key_i))
+                            if reverse_arc not in queue_set:
+                                queue.append(reverse_arc)
+                                queue_set.add(reverse_arc)
         
         return True
+    
+    def _get_initial_arcs(self) -> List[Tuple[Tuple[int, str], Tuple[int, str]]]:
+        """
+        Generate only relevant arcs based on constraints.
+        
+        For each constraint, extract the attribute types involved and create arcs
+        between all positions for those attribute types.
+        """
+        relevant_attr_pairs = set()
+        
+        # Extract relevant attribute pairs from constraints
+        for constraint in self.constraints:
+            attr_pair = self._get_constraint_attribute_pair(constraint)
+            if attr_pair:
+                attr_key1, attr_key2 = attr_pair
+                # Add both directions as potential relevant pairs
+                relevant_attr_pairs.add((attr_key1, attr_key2))
+                if attr_key1 != attr_key2:
+                    relevant_attr_pairs.add((attr_key2, attr_key1))
+        
+        # Also add all-different constraints between same attribute
+        for attr_key in self.attributes.keys():
+            relevant_attr_pairs.add((attr_key, attr_key))
+        
+        # Create arcs for relevant attribute pairs
+        arcs = []
+        for attr_key1, attr_key2 in relevant_attr_pairs:
+            for houseNr1 in range(1, self.num_House + 1):
+                for houseNr2 in range(1, self.num_House + 1):
+                    if (houseNr1, attr_key1) != (houseNr2, attr_key2):
+                        arcs.append(((houseNr1, attr_key1), (houseNr2, attr_key2)))
+        
+        return arcs
+    
+    def _get_constraint_attribute_pair(self, constraint: Constraint) -> Optional[Tuple[str, str]]:
+        """
+        Extract the attribute types involved in a constraint.
+        
+        Returns a tuple of (attr_key1, attr_key2) if the constraint involves two attributes,
+        or None if it's a unary constraint.
+        """
+        if hasattr(constraint, 'attr1') and hasattr(constraint, 'attr2'):
+            if constraint.attr1 and constraint.attr2:
+                _, attr_key1 = constraint.attr1
+                _, attr_key2 = constraint.attr2
+                return (attr_key1, attr_key2)
+        
+        # Unary constraints (PositionAbsolute, etc.) don't contribute to arc generation
+        return None
     
     def _revise(self, houseNr_i: int, attr_key_i: str, houseNr_j: int, attr_key_j: str) -> bool:
         """

@@ -55,7 +55,8 @@ class PreProcess:
                 #thats why i rename it
                 if attr_name == "unique":
                     attr_name = "mother"
-                
+                if attr_name == "colors":
+                    attr_name = words[-2]
 
                 values = re.findall(r'`([^`]+)`', values_str)
                 

@@ -10,7 +10,8 @@ class Constraint():
             text = text[:-1]
         if text == "swede":
             text = text[:-1]
-
+        if text == "ford f150":
+            text = "ford f 150"
         return text
 
 
@@ -97,11 +98,24 @@ class IdentityConstrain(Constraint):
 
     def _parse_attributes(self):
         parts = self.clue.split(" is ")
-
-        if len(parts) == 4:
+        
+        # Handle cases with 4+ parts (complex nested relationships)
+        if len(parts) >= 4:
+            # Check for patterns like "... mother's name is X is the person's child is named Y"
+            # Try to extract the first attribute value (before the main "is")
             self.attr1 = self._extract_attribute_from_text(parts[1])
-            self.attr2 = self._extract_attribute_from_text(parts[3])
-        if len(parts) == 3:
+            
+            # For the second part, reconstruct remaining parts and extract
+            # This handles cases where there are multiple "is" separators
+            remaining = " is ".join(parts[2:])
+            
+            # Check if "person's child" is mentioned in remaining part
+            if "person's child" in remaining:
+                self.attr2 = self._extract_attribute_from_text_with_key("child", remaining)
+            else:
+                self.attr2 = self._extract_attribute_from_text(remaining)
+                
+        elif len(parts) == 3:
             self.attr1 = None
             if "person's child" in parts[0]:
                 self.attr1 = self._extract_attribute_from_text_with_key("child", parts[1])
@@ -111,10 +125,20 @@ class IdentityConstrain(Constraint):
             if not self.attr1:
                 self.attr1 = self._extract_attribute_from_text(parts[0])
             
-            self.attr2 = self._extract_attribute_from_text(parts[2])
+            if "person's child" in parts[2]:
+                self.attr2 = self._extract_attribute_from_text_with_key("child", parts[2])
+            else:
+                self.attr2 = self._extract_attribute_from_text(parts[2])
         elif len(parts) == 2:
-            self.attr1 = self._extract_attribute_from_text(parts[0])
-            self.attr2 = self._extract_attribute_from_text(parts[1])
+            if "person's child" in parts[0]:
+                self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
+            else:
+                self.attr1 = self._extract_attribute_from_text(parts[0])
+            
+            if "person's child" in parts[1]:
+                self.attr2 = self._extract_attribute_from_text_with_key("child", parts[1])
+            else:
+                self.attr2 = self._extract_attribute_from_text(parts[1])
         else:
             pass
         
@@ -371,7 +395,10 @@ class RightConstrain(Constraint):
                 self.attr1 = self._extract_attribute_from_text(parts[0])
                     
             second_part = parts[1].rstrip(".")
-            self.attr2 = self._extract_attribute_from_text(second_part)
+            if "person's child" in second_part:
+                self.attr2 = self._extract_attribute_from_text_with_key("child", second_part)
+            else:
+                self.attr2 = self._extract_attribute_from_text(second_part)
 
 
     def __init__(self, attributes: dict, clue: str):
