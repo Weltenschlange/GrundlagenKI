@@ -20,19 +20,32 @@ class Constraint():
         pass
 
     def _extract_attribute_from_text(self, text):
+        # Sort by length descending to match longer values first (e.g., "super tall" before "tall")
+        best_match = None
+        best_length = 0
+        
         for key in self.attributes.keys():
             for value in self.attributes[key]:
                 value_modified = self._replace_edgecases(value)
-                if value_modified in text:
-                    return (value, key)
+                if value_modified in text and len(value_modified) > best_length:
+                    best_match = (value, key)
+                    best_length = len(value_modified)
+        
+        return best_match
     
     def _extract_attribute_from_text_with_key(self, key, text):
+        # Sort by length descending to match longer values first
+        best_match = None
+        best_length = 0
+        
         for value in self.attributes[key]:
             value_modified = self._replace_edgecases(value)
-            if value_modified in text:
-                return (value, key)
-                
-        return None
+            if value_modified in text and len(value_modified) > best_length:
+                best_match = (value, key)
+                best_length = len(value_modified)
+        
+        return best_match
+    
     def is_valid(self, attributes):
         raise NotImplementedError()
     
@@ -40,7 +53,6 @@ class Constraint():
         raise NotImplementedError()
     
     def _get_position_by_attribute(self, attr_value, attr_key, currentSolution):
-        """Find the position of a person with a specific attribute value."""
         for pos, attrs in currentSolution.items():
             if attrs.get(attr_key) == attr_value:
                 return pos
@@ -52,7 +64,6 @@ class IdentityConstrain(Constraint):
         return f"IdentityConstrain:  {self.clue}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
 
     def is_valid(self, currentSolution):
-        """Identity constraint: attr1 and attr2 must belong to the same person."""
         if not self.attr1 or not self.attr2:
             return True
         
@@ -62,19 +73,13 @@ class IdentityConstrain(Constraint):
         pos1 = self._get_position_by_attribute(attr1_val, attr1_key, currentSolution)
         pos2 = self._get_position_by_attribute(attr2_val, attr2_key, currentSolution)
         
-        # If both are unassigned, constraint is satisfied (can be assigned later)
-        if pos1 is None and pos2 is None:
-            return True
-        
         # If one is assigned and the other is not, it's still potentially valid
         if pos1 is None or pos2 is None:
             return True
         
-        # If both are assigned, they must be to the same position
         return pos1 == pos2
     
     def get_wrong_attributes(self, currentSolution):
-        """Return attributes that violate this constraint."""
         if not self.attr1 or not self.attr2:
             return []
         
@@ -114,7 +119,6 @@ class IdentityConstrain(Constraint):
             pass
         
 
-
     def __init__(self, attributes: dict, clue: str):
         super().__init__(attributes, clue)
         self.attr1:tuple = None
@@ -127,9 +131,8 @@ class NextToConstrain(Constraint):
         return f"NextToConstrain: {self.clue}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
 
     def is_valid(self, currentSolution):
-        """Next-to constraint: attr1 and attr2 must be in adjacent positions."""
         if not self.attr1 or not self.attr2:
-            return True
+            return False
         
         attr1_val, attr1_key = self.attr1
         attr2_val, attr2_key = self.attr2
@@ -143,7 +146,6 @@ class NextToConstrain(Constraint):
         return abs(pos1 - pos2) == 1
     
     def get_wrong_attributes(self, currentSolution):
-        """Return attributes that violate this constraint."""
         if not self.attr1 or not self.attr2:
             return []
         
@@ -187,9 +189,8 @@ class DistanceConstrain(Constraint):
         return f"DistanceConstrain: {self.clue}\ndistance:{self.distance}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
     
     def is_valid(self, currentSolution):
-        """Distance constraint: attr1 and attr2 must be exactly 'distance' positions apart."""
         if not self.attr1 or not self.attr2:
-            return True
+            return False
         
         attr1_val, attr1_key = self.attr1
         attr2_val, attr2_key = self.attr2
@@ -200,10 +201,9 @@ class DistanceConstrain(Constraint):
         if pos1 is None or pos2 is None:
             return True
         
-        return abs(pos1 - pos2) == self.distance + 1  # +1 because there are N houses between means distance N+1
+        return abs(pos1 - pos2) == self.distance + 1
     
     def get_wrong_attributes(self, currentSolution):
-        """Return attributes that violate this constraint."""
         if not self.attr1 or not self.attr2:
             return []
         
@@ -271,9 +271,8 @@ class LeftConstrain(Constraint):
         return f"LeftConstrain: {self.clue}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
     
     def is_valid(self, currentSolution):
-        """Left constraint: attr1 must be somewhere to the left of attr2."""
         if not self.attr1 or not self.attr2:
-            return True
+            return False
         
         attr1_val, attr1_key = self.attr1
         attr2_val, attr2_key = self.attr2
@@ -287,7 +286,6 @@ class LeftConstrain(Constraint):
         return pos1 < pos2
     
     def get_wrong_attributes(self, currentSolution):
-        """Return attributes that violate this constraint."""
         if not self.attr1 or not self.attr2:
             return []
         
@@ -331,9 +329,8 @@ class RightConstrain(Constraint):
         return f"RightConstrain: {self.clue}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
     
     def is_valid(self, currentSolution):
-        """Right constraint: attr1 must be somewhere to the right of attr2."""
         if not self.attr1 or not self.attr2:
-            return True
+            return False
         
         attr1_val, attr1_key = self.attr1
         attr2_val, attr2_key = self.attr2
@@ -347,7 +344,6 @@ class RightConstrain(Constraint):
         return pos1 > pos2
     
     def get_wrong_attributes(self, currentSolution):
-        """Return attributes that violate this constraint."""
         if not self.attr1 or not self.attr2:
             return []
         
@@ -390,9 +386,8 @@ class DirectLeftConstrain(Constraint):
         return f"DirectLeftConstrain: {self.clue}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
     
     def is_valid(self, currentSolution):
-        """Direct left constraint: attr1 must be directly left of attr2 (adjacent, attr1 first)."""
         if not self.attr1 or not self.attr2:
-            return True
+            return False
         
         attr1_val, attr1_key = self.attr1
         attr2_val, attr2_key = self.attr2
@@ -406,7 +401,6 @@ class DirectLeftConstrain(Constraint):
         return pos2 - pos1 == 1
     
     def get_wrong_attributes(self, currentSolution):
-        """Return attributes that violate this constraint."""
         if not self.attr1 or not self.attr2:
             return []
         
@@ -449,9 +443,8 @@ class DirectRightConstrain(Constraint):
         return f"DirectRightConstrain: {self.clue}\nattr1:{self.attr1}\nattr2:{self.attr2}\nattributes:{self.attributes}\n"
     
     def is_valid(self, currentSolution):
-        """Direct right constraint: attr1 must be directly right of attr2 (adjacent, attr1 second)."""
         if not self.attr1 or not self.attr2:
-            return True
+            return False
         
         attr1_val, attr1_key = self.attr1
         attr2_val, attr2_key = self.attr2
@@ -465,7 +458,6 @@ class DirectRightConstrain(Constraint):
         return pos1 - pos2 == 1
     
     def get_wrong_attributes(self, currentSolution):
-        """Return attributes that violate this constraint."""
         if not self.attr1 or not self.attr2:
             return []
         
@@ -508,9 +500,8 @@ class PositionAbsoluteConstrain(Constraint):
         return f"PositionAbsoluteConstrain: {self.clue}\nPosition:{self.pos}\nattr1:{self.attr1}\nattributes:{self.attributes}\n"
     
     def is_valid(self, currentSolution):
-        """Absolute position constraint: attr1 must be in position self.pos."""
         if not self.attr1 or self.pos is None:
-            return True
+            return False
         
         attr_val, attr_key = self.attr1
         pos = self._get_position_by_attribute(attr_val, attr_key, currentSolution)
@@ -521,7 +512,6 @@ class PositionAbsoluteConstrain(Constraint):
         return pos == self.pos
     
     def get_wrong_attributes(self, currentSolution):
-        """Return attributes that violate this constraint."""
         if not self.attr1 or self.pos is None:
             return []
         
@@ -577,9 +567,8 @@ class PositionAbsoluteNegativeConstrain(Constraint):
         return f"PositionAbsoluteNegativeConstrain: {self.clue}\nPosition:{self.pos}\nattr1:{self.attr1}\nattributes:{self.attributes}\n"
     
     def is_valid(self, currentSolution):
-        """Negative absolute position constraint: attr1 must NOT be in position self.pos."""
         if not self.attr1 or self.pos is None:
-            return True
+            return False
         
         attr_val, attr_key = self.attr1
         pos = self._get_position_by_attribute(attr_val, attr_key, currentSolution)
@@ -590,7 +579,6 @@ class PositionAbsoluteNegativeConstrain(Constraint):
         return pos != self.pos
     
     def get_wrong_attributes(self, currentSolution):
-        """Return attributes that violate this constraint."""
         if not self.attr1 or self.pos is None:
             return []
         
