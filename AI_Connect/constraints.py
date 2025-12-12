@@ -1,3 +1,5 @@
+import re
+
 class Constraint():
 
     def get_info(self):
@@ -112,32 +114,43 @@ class IdentityConstrain(Constraint):
             # Check if "person's child" is mentioned in remaining part
             if "person's child" in remaining:
                 self.attr2 = self._extract_attribute_from_text_with_key("child", remaining)
+            elif "hair" in remaining:
+                self.attr2 = self._extract_attribute_from_text_with_key("hair", remaining)
             else:
                 self.attr2 = self._extract_attribute_from_text(remaining)
                 
         elif len(parts) == 3:
-            self.attr1 = None
-            if "person's child" in parts[0]:
-                self.attr1 = self._extract_attribute_from_text_with_key("child", parts[1])
-
+            # Check if any attribute key appears in parts[1]
+            for key in self.attributes.keys():
+                if f" {key} " in f" {parts[0]} ":
+                    self.attr1 = self._extract_attribute_from_text_with_key(key, parts[1])
+                    break
             if not self.attr1:
                 self.attr1 = self._extract_attribute_from_text(parts[1])
-            if not self.attr1:
-                self.attr1 = self._extract_attribute_from_text(parts[0])
             
-            if "person's child" in parts[2]:
-                self.attr2 = self._extract_attribute_from_text_with_key("child", parts[2])
-            else:
+            for key in self.attributes.keys():
+                # Option 1: Use regex word boundaries
+                if re.search(rf"\b{re.escape(key)}\b", parts[2], re.IGNORECASE):
+                    self.attr2 = self._extract_attribute_from_text_with_key(key, parts[2])
+                    break
+
+            if not self.attr2:
                 self.attr2 = self._extract_attribute_from_text(parts[2])
         elif len(parts) == 2:
             if "person's child" in parts[0]:
                 self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
+            elif "hair" in parts[0]:
+                self.attr1 = self._extract_attribute_from_text_with_key("hair", parts[0])
             else:
                 self.attr1 = self._extract_attribute_from_text(parts[0])
             
-            if "person's child" in parts[1]:
-                self.attr2 = self._extract_attribute_from_text_with_key("child", parts[1])
-            else:
+            # Check for attribute keys first in parts[1]
+            for key in self.attributes.keys():
+                if re.search(rf"\b{re.escape(key)}\b", parts[1], re.IGNORECASE):
+                    self.attr2 = self._extract_attribute_from_text_with_key(key, parts[1])
+                    break
+            
+            if not self.attr2:
                 self.attr2 = self._extract_attribute_from_text(parts[1])
         else:
             pass
@@ -188,17 +201,21 @@ class NextToConstrain(Constraint):
         parts = self.clue.split(" and ")
         
         if len(parts) >= 2:
-            if "person's child" in parts[0]:
-                self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
-            else:
+            for key in self.attributes.keys():
+                if re.search(rf"\b{re.escape(key)}\b", parts[0], re.IGNORECASE):
+                    self.attr1 = self._extract_attribute_from_text_with_key(key, parts[0])
+                    break
+            if not self.attr1:
                 self.attr1 = self._extract_attribute_from_text(parts[0])
             second_part = parts[1]
             if " are next to each other" in second_part:
                 second_part = second_part.replace(" are next to each other", "")
             
-            if "person's child" in second_part:
-                self.attr2 = self._extract_attribute_from_text_with_key("child", second_part)
-            else:
+            for key in self.attributes.keys():
+                if re.search(rf"\b{re.escape(key)}\b", second_part, re.IGNORECASE):
+                    self.attr2 = self._extract_attribute_from_text_with_key(key, second_part)
+                    break
+            if not self.attr2:
                 self.attr2 = self._extract_attribute_from_text(second_part)
 
 
@@ -259,26 +276,30 @@ class DistanceConstrain(Constraint):
         self.distance = 1 
         clue_lower = self.clue.lower()
         
+        # Use regex word boundaries instead of substring matching
         for word, value in distance_words.items():
-            if word in clue_lower:
+            if re.search(rf"\b{word}\b", clue_lower):
                 self.distance = value
                 break
-        
-
+    
         if " and " in clue_lower:
             parts = self.clue.split(" and ")
             
             if len(parts) >= 2:
 
-                if "person's child" in parts[0]:
-                    self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", parts[0], re.IGNORECASE):
+                        self.attr1 = self._extract_attribute_from_text_with_key(key, parts[0])
+                        break
+                if not self.attr1:
                     self.attr1 = self._extract_attribute_from_text(parts[0])
                 
                 second_part = parts[1].rstrip(".")
-                if "person's child" in second_part:
-                    self.attr2 = self._extract_attribute_from_text_with_key("child", second_part)
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", second_part, re.IGNORECASE):
+                        self.attr2 = self._extract_attribute_from_text_with_key(key, second_part)
+                        break
+                if not self.attr2:
                     self.attr2 = self._extract_attribute_from_text(second_part)
 
 
@@ -329,15 +350,19 @@ class LeftConstrain(Constraint):
             parts = self.clue.split(" is somewhere to the left of ")
             
             if len(parts) == 2:
-                if "person's child" in parts[0]:
-                    self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", parts[0], re.IGNORECASE):
+                        self.attr1 = self._extract_attribute_from_text_with_key(key, parts[0])
+                        break
+                if not self.attr1:
                     self.attr1 = self._extract_attribute_from_text(parts[0])
                 
                 second_part = parts[1].rstrip(".")
-                if "person's child" in second_part:
-                    self.attr2 = self._extract_attribute_from_text_with_key("child", second_part)
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", second_part, re.IGNORECASE):
+                        self.attr2 = self._extract_attribute_from_text_with_key(key, second_part)
+                        break
+                if not self.attr2:
                     self.attr2 = self._extract_attribute_from_text(second_part)
 
 
@@ -389,15 +414,19 @@ class RightConstrain(Constraint):
             if len(parts) != 2:
                 return
 
-            if "person's child" in parts[0]:
-                self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
-            else:
+            for key in self.attributes.keys():
+                if re.search(rf"\b{re.escape(key)}\b", parts[0], re.IGNORECASE):
+                    self.attr1 = self._extract_attribute_from_text_with_key(key, parts[0])
+                    break
+            if not self.attr1:
                 self.attr1 = self._extract_attribute_from_text(parts[0])
                     
             second_part = parts[1].rstrip(".")
-            if "person's child" in second_part:
-                self.attr2 = self._extract_attribute_from_text_with_key("child", second_part)
-            else:
+            for key in self.attributes.keys():
+                if re.search(rf"\b{re.escape(key)}\b", second_part, re.IGNORECASE):
+                    self.attr2 = self._extract_attribute_from_text_with_key(key, second_part)
+                    break
+            if not self.attr2:
                 self.attr2 = self._extract_attribute_from_text(second_part)
 
 
@@ -447,14 +476,18 @@ class DirectLeftConstrain(Constraint):
             parts = self.clue.split(" is directly left of ")
             
             if len(parts) == 2:
-                if "person's child" in parts[0]:
-                    self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", parts[0], re.IGNORECASE):
+                        self.attr1 = self._extract_attribute_from_text_with_key(key, parts[0])
+                        break
+                if not self.attr1:
                     self.attr1 = self._extract_attribute_from_text(parts[0])
                 second_part = parts[1].rstrip(".")
-                if "person's child" in second_part:
-                    self.attr2 = self._extract_attribute_from_text_with_key("child", second_part)
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", second_part, re.IGNORECASE):
+                        self.attr2 = self._extract_attribute_from_text_with_key(key, second_part)
+                        break
+                if not self.attr2:
                     self.attr2 = self._extract_attribute_from_text(second_part)
 
 
@@ -504,14 +537,18 @@ class DirectRightConstrain(Constraint):
             parts = self.clue.split(" is directly right of ")
             
             if len(parts) == 2:
-                if "person's child" in parts[0]:
-                    self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", parts[0], re.IGNORECASE):
+                        self.attr1 = self._extract_attribute_from_text_with_key(key, parts[0])
+                        break
+                if not self.attr1:
                     self.attr1 = self._extract_attribute_from_text(parts[0])
                 second_part = parts[1].rstrip(".")
-                if "person's child" in second_part:
-                    self.attr2 = self._extract_attribute_from_text_with_key("child", second_part)
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", second_part, re.IGNORECASE):
+                        self.attr2 = self._extract_attribute_from_text_with_key(key, second_part)
+                        break
+                if not self.attr2:
                     self.attr2 = self._extract_attribute_from_text(second_part)
 
 
@@ -576,9 +613,11 @@ class PositionAbsoluteConstrain(Constraint):
             parts = self.clue.split(" is in the ")
             
             if len(parts) >= 1:
-                if "person's child" in parts[0]:
-                    self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", parts[0], re.IGNORECASE):
+                        self.attr1 = self._extract_attribute_from_text_with_key(key, parts[0])
+                        break
+                if not self.attr1:
                     self.attr1 = self._extract_attribute_from_text(parts[0])
 
 
@@ -643,9 +682,11 @@ class PositionAbsoluteNegativeConstrain(Constraint):
             parts = self.clue.split(" is not in the ")
             
             if len(parts) >= 1:
-                if "person's child" in parts[0]:
-                    self.attr1 = self._extract_attribute_from_text_with_key("child", parts[0])
-                else:
+                for key in self.attributes.keys():
+                    if re.search(rf"\b{re.escape(key)}\b", parts[0], re.IGNORECASE):
+                        self.attr1 = self._extract_attribute_from_text_with_key(key, parts[0])
+                        break
+                if not self.attr1:
                     self.attr1 = self._extract_attribute_from_text(parts[0])
 
     def __init__(self, attributes: dict, clue: str):
